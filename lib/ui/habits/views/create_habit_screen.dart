@@ -27,6 +27,52 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
   bool _remindersEnabled = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
   bool _isLoading = false;
+  DateTime? _originalCreatedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    // If editing, load the existing habit data
+    if (widget.habitUuid != null) {
+      _loadHabitData();
+    }
+  }
+
+  Future<void> _loadHabitData() async {
+    if (widget.habitUuid == null) return;
+
+    try {
+      final repository = ref.read(habitRepositoryProvider);
+      final habits = await repository.getAllHabits();
+      final habit = habits.firstWhere((h) => h.uuid == widget.habitUuid,
+          orElse: () => Habit());
+
+      if (habit.uuid != null && habit.uuid!.isNotEmpty) {
+        setState(() {
+          _originalCreatedAt = habit.createdAt;
+          _titleController.text = habit.title;
+          _descriptionController.text = habit.description ?? '';
+          _selectedCategory = habit.category;
+          _selectedFrequency = habit.frequencyType;
+          _targetController.text = habit.targetCount.toString();
+          _unitController.text = habit.unit;
+          _remindersEnabled = habit.reminderEnabled;
+          if (habit.reminderTime != null) {
+            _reminderTime = TimeOfDay(
+              hour: habit.reminderTime!.hour,
+              minute: habit.reminderTime!.minute,
+            );
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading habit: $e')),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -61,7 +107,7 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
               ? DateTime.now().copyWith(
                   hour: _reminderTime.hour, minute: _reminderTime.minute)
               : null
-          ..createdAt = DateTime.now()
+          ..createdAt = _originalCreatedAt ?? DateTime.now()
           ..updatedAt = DateTime.now();
 
         await repository.saveHabit(habit);
