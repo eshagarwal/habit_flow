@@ -36,7 +36,7 @@ class HabitDetailScreen extends ConsumerWidget {
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit),
-                onPressed: () => context.go('/create-habit'),
+                onPressed: () => context.go('/create-habit?uuid=${habit.uuid}'),
               ),
               IconButton(
                 icon: const Icon(Icons.delete),

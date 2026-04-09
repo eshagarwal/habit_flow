@@ -20,7 +20,9 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: 'create-habit',
-          builder: (context, state) => const CreateHabitScreen(),
+          builder: (context, state) => CreateHabitScreen(
+            habitUuid: state.uri.queryParameters['uuid'],
+          ),
         ),
         GoRoute(
           path: 'habit/:uuid',
