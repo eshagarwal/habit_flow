@@ -96,6 +96,24 @@ class DashboardScreen extends ConsumerWidget {
 
                 return todayEntriesAsyncValue.when(
                   data: (entries) {
+                    // Sort habits: incomplete first, completed last
+                    final sortedHabits = List<dynamic>.from(habits);
+                    sortedHabits.sort((a, b) {
+                      final aCompleted = entries
+                              .where((e) => e.habitUuid == a.uuid)
+                              .firstOrNull
+                              ?.completed ??
+                          false;
+                      final bCompleted = entries
+                              .where((e) => e.habitUuid == b.uuid)
+                              .firstOrNull
+                              ?.completed ??
+                          false;
+
+                      // Incomplete habits first (false < true)
+                      return aCompleted ? 1 : (bCompleted ? -1 : 0);
+                    });
+
                     final completedCount =
                         entries.where((e) => e.completed).length;
                     final progressPercent =
@@ -212,11 +230,11 @@ class DashboardScreen extends ConsumerWidget {
                           physics: const NeverScrollableScrollPhysics(),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           shrinkWrap: true,
-                          itemCount: habits.length,
+                          itemCount: sortedHabits.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
-                            final habit = habits[index];
+                            final habit = sortedHabits[index];
                             final entry = entries
                                 .where((e) => e.habitUuid == habit.uuid)
                                 .firstOrNull;
