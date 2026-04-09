@@ -53,7 +53,7 @@ class DashboardScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
+                        DateFormat('EEEE, MMMM d').format(DateTime.now()),
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.9),
                           fontSize: 14,
@@ -63,13 +63,6 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-              ),
-              title: Text(
-                'HabitFlow',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
               ),
             ),
             actions: [
@@ -112,7 +105,7 @@ class DashboardScreen extends ConsumerWidget {
                       children: [
                         // Progress summary card
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                          padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
                           child: Card(
                             child: Padding(
                               padding: const EdgeInsets.all(20),
@@ -120,8 +113,8 @@ class DashboardScreen extends ConsumerWidget {
                                 children: [
                                   // Progress circle
                                   SizedBox(
-                                    height: 120,
-                                    width: 120,
+                                    height: 140,
+                                    width: 140,
                                     child: Stack(
                                       alignment: Alignment.center,
                                       children: [
@@ -148,7 +141,7 @@ class DashboardScreen extends ConsumerWidget {
                                                     fontWeight: FontWeight.w700,
                                                   ),
                                             ),
-                                            const SizedBox(height: 4),
+                                            const SizedBox(height: 8),
                                             Text(
                                               'Completed',
                                               style: Theme.of(context)
@@ -160,7 +153,7 @@ class DashboardScreen extends ConsumerWidget {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 20),
                                   Text(
                                     '${(progressPercent * 100).toStringAsFixed(0)}% Complete',
                                     style: Theme.of(context)
@@ -170,7 +163,7 @@ class DashboardScreen extends ConsumerWidget {
                                           fontWeight: FontWeight.w600,
                                         ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 12),
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
                                     child: LinearProgressIndicator(
