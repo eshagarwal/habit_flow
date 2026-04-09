@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../domain/models/habit.dart';
 import '../domain/models/habit_entry.dart';
@@ -7,6 +8,7 @@ import 'repositories/habit_repository.dart';
 import 'repositories/habit_repository_impl.dart';
 import 'datasources/local/habit_local_source.dart';
 import 'services/streak_service.dart';
+import 'services/reminder_service.dart';
 
 // Provides the Isar instance
 final isarProvider = Provider<Isar>((ref) {
@@ -26,6 +28,11 @@ final habitRepositoryProvider = Provider<HabitRepository>((ref) {
 // Provides the streak service
 final streakServiceProvider = Provider<StreakService>((ref) {
   return StreakService();
+});
+
+// Provides the reminder service
+final reminderServiceProvider = Provider<ReminderService>((ref) {
+  return ReminderService(FlutterLocalNotificationsPlugin());
 });
 
 // A provider to fetch habits
