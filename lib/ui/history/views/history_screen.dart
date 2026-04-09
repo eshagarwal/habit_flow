@@ -465,9 +465,6 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       child: Text(
                         'Entry ${index + 1}',
                         style: TextStyle(
-                          decoration: entry.completed
-                              ? TextDecoration.lineThrough
-                              : null,
                           color: entry.completed ? Colors.grey[600] : null,
                         ),
                       ),
