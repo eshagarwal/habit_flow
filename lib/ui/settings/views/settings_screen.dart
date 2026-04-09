@@ -1,18 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../data/providers.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  ThemeMode _themeMode = ThemeMode.system;
-  bool _notificationsEnabled = true;
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  late bool _notificationsEnabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationsEnabled = true;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = ref.watch(themeProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -39,8 +49,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context: context,
                   icon: Icons.brightness_7,
                   title: 'Theme',
-                  subtitle: _getThemeModeString(_themeMode),
-                  trailing: _buildThemeDropdown(),
+                  subtitle: _getThemeModeString(themeMode),
+                  trailing: _buildThemeDropdown(themeMode),
                 ),
                 const Divider(height: 1),
                 _buildSettingsTile(
@@ -192,12 +202,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildThemeDropdown() {
+  Widget _buildThemeDropdown(ThemeMode currentThemeMode) {
     return DropdownButton<ThemeMode>(
-      value: _themeMode,
+      value: currentThemeMode,
       onChanged: (ThemeMode? newMode) {
         if (newMode != null) {
-          setState(() => _themeMode = newMode);
+          ref.read(themeProvider.notifier).state = newMode;
         }
       },
       items: const [

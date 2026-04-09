@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -9,6 +10,11 @@ import 'repositories/habit_repository_impl.dart';
 import 'datasources/local/habit_local_source.dart';
 import 'services/streak_service.dart';
 import 'services/reminder_service.dart';
+
+// Theme provider
+final themeProvider = StateProvider<ThemeMode>((ref) {
+  return ThemeMode.system;
+});
 
 // Provides the Isar instance
 final isarProvider = Provider<Isar>((ref) {
