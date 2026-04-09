@@ -375,8 +375,6 @@ class _HabitCard extends StatelessWidget {
                       habit.title,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w600,
-                            decoration:
-                                isCompleted ? TextDecoration.lineThrough : null,
                             color: isCompleted ? Colors.grey[600] : null,
                           ),
                     ),
