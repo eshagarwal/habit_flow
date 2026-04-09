@@ -7,7 +7,9 @@ import '../../../domain/models/habit.dart';
 import '../../../data/providers.dart';
 
 class CreateHabitScreen extends ConsumerStatefulWidget {
-  const CreateHabitScreen({super.key});
+  final String? habitUuid;
+
+  const CreateHabitScreen({super.key, this.habitUuid});
 
   @override
   ConsumerState<CreateHabitScreen> createState() => _CreateHabitScreenState();
@@ -18,43 +20,91 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _targetController = TextEditingController(text: '1');
-  
+  final _unitController = TextEditingController(text: 'times');
+
   HabitCategory _selectedCategory = HabitCategory.health;
   FrequencyType _selectedFrequency = FrequencyType.daily;
   bool _remindersEnabled = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 9, minute: 0);
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _targetController.dispose();
+    _unitController.dispose();
     super.dispose();
   }
 
-  void _saveHabit() async {
+  Future<void> _saveHabit() async {
     if (_formKey.currentState!.validate()) {
-      final repository = ref.read(habitRepositoryProvider);
-      
-      final habit = Habit()
-        ..uuid = const Uuid().v4()
-        ..title = _titleController.text
-        ..description = _descriptionController.text.isEmpty ? null : _descriptionController.text
-        ..category = _selectedCategory
-        ..frequencyType = _selectedFrequency
-        ..targetCount = int.tryParse(_targetController.text) ?? 1
-        ..unit = 'times'
-        ..reminderEnabled = _remindersEnabled
-        ..createdAt = DateTime.now()
-        ..updatedAt = DateTime.now();
+      setState(() => _isLoading = true);
 
-      await repository.saveHabit(habit);
-      
-      // Invalidate the provider so dashboard refreshes
-      ref.invalidate(habitsProvider);
-      
-      if (mounted) {
-        context.pop();
+      try {
+        final repository = ref.read(habitRepositoryProvider);
+
+        final habit = Habit()
+          ..uuid = widget.habitUuid ?? const Uuid().v4()
+          ..title = _titleController.text.trim()
+          ..description = _descriptionController.text.isEmpty
+              ? null
+              : _descriptionController.text.trim()
+          ..category = _selectedCategory
+          ..frequencyType = _selectedFrequency
+          ..targetCount = int.tryParse(_targetController.text) ?? 1
+          ..unit = _unitController.text.trim().isEmpty
+              ? 'times'
+              : _unitController.text.trim()
+          ..reminderEnabled = _remindersEnabled
+          ..reminderTime = _remindersEnabled
+              ? DateTime.now().copyWith(
+                  hour: _reminderTime.hour, minute: _reminderTime.minute)
+              : null
+          ..createdAt = DateTime.now()
+          ..updatedAt = DateTime.now();
+
+        await repository.saveHabit(habit);
+
+        // Invalidate the provider so dashboard refreshes
+        ref.invalidate(habitsProvider);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(widget.habitUuid == null
+                  ? 'Habit created successfully!'
+                  : 'Habit updated successfully!'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          context.pop();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving habit: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
+    }
+  }
+
+  Future<void> _pickReminderTime() async {
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+    );
+    if (pickedTime != null) {
+      setState(() => _reminderTime = pickedTime);
     }
   }
 
@@ -62,88 +112,256 @@ class _CreateHabitScreenState extends ConsumerState<CreateHabitScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Habit'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _saveHabit,
-          )
-        ],
+        title: Text(widget.habitUuid == null ? 'Create Habit' : 'Edit Habit'),
+        elevation: 0,
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16.0),
-          children: [
-            TextFormField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Habit Title',
-                border: OutlineInputBorder(),
+      body: SingleChildScrollView(
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Form content
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Habit Title
+                    _buildSectionTitle('Basic Information'),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        labelText: 'Habit Title *',
+                        hintText: 'e.g., Morning Exercise, Read 30 minutes',
+                        prefixIcon: const Icon(Icons.title),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a habit title';
+                        }
+                        if (value.length < 2) {
+                          return 'Title must be at least 2 characters';
+                        }
+                        if (value.length > 50) {
+                          return 'Title cannot exceed 50 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                        hintText: 'Optional details about this habit',
+                        prefixIcon: Icon(Icons.description),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Frequency Section
+                    _buildSectionTitle('Frequency & Target'),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<HabitCategory>(
+                      value: _selectedCategory,
+                      decoration: const InputDecoration(
+                        labelText: 'Category *',
+                        prefixIcon: Icon(Icons.category),
+                      ),
+                      items: HabitCategory.values.map((cat) {
+                        final catName = cat.toString().split('.').last;
+                        return DropdownMenuItem(
+                          value: cat,
+                          child: Text(
+                              catName[0].toUpperCase() + catName.substring(1)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null)
+                          setState(() => _selectedCategory = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<FrequencyType>(
+                      value: _selectedFrequency,
+                      decoration: const InputDecoration(
+                        labelText: 'Frequency *',
+                        prefixIcon: Icon(Icons.repeat),
+                      ),
+                      items: FrequencyType.values.map((freq) {
+                        final freqName = freq.toString().split('.').last;
+                        return DropdownMenuItem(
+                          value: freq,
+                          child: Text(freqName[0].toUpperCase() +
+                              freqName.substring(1)),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null)
+                          setState(() => _selectedFrequency = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _targetController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Target Count *',
+                              hintText: '1',
+                              prefixIcon: Icon(Icons.functions),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Required';
+                              }
+                              final num = int.tryParse(value);
+                              if (num == null || num <= 0) {
+                                return 'Must be > 0';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _unitController,
+                            decoration: const InputDecoration(
+                              labelText: 'Unit *',
+                              hintText: 'times, minutes, km',
+                              prefixIcon: Icon(Icons.straighten),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Reminder Section
+                    _buildSectionTitle('Reminders'),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: Column(
+                          children: [
+                            SwitchListTile(
+                              title: const Text('Enable Reminders'),
+                              subtitle: const Text(
+                                  'Get notified when it\'s time to complete this habit'),
+                              value: _remindersEnabled,
+                              onChanged: (val) =>
+                                  setState(() => _remindersEnabled = val),
+                            ),
+                            if (_remindersEnabled)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Reminder Time',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          _reminderTime.format(context),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                    FilledButton.tonal(
+                                      onPressed:
+                                          _isLoading ? null : _pickReminderTime,
+                                      child: const Text('Change Time'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a title';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (Optional)',
-                border: OutlineInputBorder(),
+
+              // Action buttons
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton(
+                        onPressed: _isLoading ? null : _saveHabit,
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white),
+                                ),
+                              )
+                            : Text(widget.habitUuid == null
+                                ? 'Create Habit'
+                                : 'Save Changes'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: _isLoading ? null : () => context.pop(),
+                        child: const Text('Cancel'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<HabitCategory>(
-              value: _selectedCategory,
-              decoration: const InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(),
-              ),
-              items: HabitCategory.values.map((cat) {
-                return DropdownMenuItem(
-                  value: cat,
-                  child: Text(cat.name.toUpperCase()),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedCategory = val);
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<FrequencyType>(
-              value: _selectedFrequency,
-              decoration: const InputDecoration(
-                labelText: 'Frequency',
-                border: OutlineInputBorder(),
-              ),
-              items: FrequencyType.values.map((freq) {
-                return DropdownMenuItem(
-                  value: freq,
-                  child: Text(freq.name.toUpperCase()),
-                );
-              }).toList(),
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedFrequency = val);
-              },
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              title: const Text('Enable Reminders'),
-              value: _remindersEnabled,
-              onChanged: (val) => setState(() => _remindersEnabled = val),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: _saveHabit,
-              child: const Text('Save Habit'),
-            )
-          ],
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: Theme.of(context).colorScheme.primary,
+          ),
     );
   }
 }

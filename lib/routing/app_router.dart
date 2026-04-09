@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import '../ui/onboarding/views/onboarding_screen.dart';
 import '../ui/dashboard/views/dashboard_screen.dart';
 import '../ui/habits/views/create_habit_screen.dart';
 import '../ui/habits/views/habit_detail_screen.dart';
@@ -7,8 +8,12 @@ import '../ui/stats/views/stats_screen.dart';
 import '../ui/settings/views/settings_screen.dart';
 
 final appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/onboarding',
   routes: [
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingScreen(),
+    ),
     GoRoute(
       path: '/',
       builder: (context, state) => const DashboardScreen(),
