@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../data/providers.dart';
+import '../../../scripts/seed_data_test.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -157,6 +157,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: () => _showResetConfirmDialog(context),
                   titleColor: Colors.red,
                   iconColor: Colors.red,
+                ),
+                const Divider(height: 1),
+                _buildSettingsTile(
+                  context: context,
+                  icon: Icons.add_circle_outline_outlined,
+                  title: 'Seed Data',
+                  subtitle: 'Add dummy data to the app.',
+                  // trailing: const Icon(Icons.open_in_new, size: 20),
+                  onTap: () async {
+                    await seedData();
+                  },
                 ),
               ],
             ),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../data/providers.dart';
 import '../../../domain/models/habit.dart';
+import '../../../domain/models/habit_entry.dart';
 
 class HabitDetailScreen extends ConsumerWidget {
   final String habitUuid;
@@ -92,60 +93,181 @@ class HabitDetailScreen extends ConsumerWidget {
                 // Stats Cards
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
+                  child: Consumer(builder: (context, ref, _) {
+                    final entriesAsync =
+                        ref.watch(entriesByHabitProvider(habitUuid));
+                    return entriesAsync.when(
+                      data: (entries) {
+                        final streakService = ref.read(streakServiceProvider);
+                        final stats =
+                            streakService.calculateStats(habit, entries);
+                        return Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStatCard(
+                                    context,
+                                    icon: Icons.local_fire_department,
+                                    label: 'Current Streak',
+                                    value: '${stats.currentStreak}',
+                                    unit: 'days',
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStatCard(
+                                    context,
+                                    icon: Icons.star,
+                                    label: 'Best Streak',
+                                    value: '${stats.longestStreak}',
+                                    unit: 'days',
+                                    color: Colors.amber,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildStatCard(
+                                    context,
+                                    icon: Icons.check_circle,
+                                    label: 'Total Completed',
+                                    value:
+                                        '${entries.where((e) => e.completed).length}',
+                                    unit: 'times',
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildStatCard(
+                                    context,
+                                    icon: Icons.percent,
+                                    label: 'Completion Rate',
+                                    value:
+                                        '${(stats.completionRate * 100).toStringAsFixed(0)}%',
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
+                      loading: () => Column(
                         children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              icon: Icons.local_fire_department,
-                              label: 'Current Streak',
-                              value: '5',
-                              unit: 'days',
-                              color: Colors.orange,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.local_fire_department,
+                                  label: 'Current Streak',
+                                  value: '...',
+                                  unit: 'days',
+                                  color: Colors.orange,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.star,
+                                  label: 'Best Streak',
+                                  value: '...',
+                                  unit: 'days',
+                                  color: Colors.amber,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              icon: Icons.star,
-                              label: 'Best Streak',
-                              value: '12',
-                              unit: 'days',
-                              color: Colors.amber,
-                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.check_circle,
+                                  label: 'Total Completed',
+                                  value: '...',
+                                  unit: 'times',
+                                  color: Colors.green,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.percent,
+                                  label: 'Completion Rate',
+                                  value: '...',
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      Row(
+                      error: (_, __) => Column(
                         children: [
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              icon: Icons.check_circle,
-                              label: 'Total Completed',
-                              value: '45',
-                              unit: 'times',
-                              color: Colors.green,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.local_fire_department,
+                                  label: 'Current Streak',
+                                  value: '--',
+                                  unit: 'days',
+                                  color: Colors.orange,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.star,
+                                  label: 'Best Streak',
+                                  value: '--',
+                                  unit: 'days',
+                                  color: Colors.amber,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatCard(
-                              context,
-                              icon: Icons.percent,
-                              label: 'Completion Rate',
-                              value: '85%',
-                              color: Colors.blue,
-                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.check_circle,
+                                  label: 'Total Completed',
+                                  value: '--',
+                                  unit: 'times',
+                                  color: Colors.green,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildStatCard(
+                                  context,
+                                  icon: Icons.percent,
+                                  label: 'Completion Rate',
+                                  value: '--',
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    );
+                  }),
                 ),
 
                 // Recent Activity
@@ -162,39 +284,63 @@ class HabitDetailScreen extends ConsumerWidget {
                                 ),
                       ),
                       const SizedBox(height: 12),
-                      Card(
-                        child: ListView.separated(
-                          physics: const NeverScrollableScrollPhysics(),
-                          shrinkWrap: true,
-                          itemCount: 7,
-                          separatorBuilder: (_, __) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final date =
-                                DateTime.now().subtract(Duration(days: index));
-                            final isCompleted = index % 2 == 0;
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              leading: Icon(
-                                isCompleted
-                                    ? Icons.check_circle
-                                    : Icons.radio_button_unchecked,
-                                color: isCompleted ? Colors.green : Colors.grey,
-                              ),
-                              title:
-                                  Text(DateFormat('MMM d, yyyy').format(date)),
-                              trailing: Text(
-                                isCompleted ? 'Completed' : 'Missed',
-                                style: TextStyle(
-                                  color:
-                                      isCompleted ? Colors.green : Colors.red,
-                                  fontWeight: FontWeight.w600,
+                      Consumer(builder: (context, ref, _) {
+                        final entriesAsync =
+                            ref.watch(entriesByHabitProvider(habitUuid));
+                        return entriesAsync.when(
+                          data: (entries) {
+                            final recent = entries.toList()
+                              ..sort((a, b) => b.date.compareTo(a.date));
+                            if (recent.isEmpty) {
+                              return const Card(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text('No activity yet'),
                                 ),
+                              );
+                            }
+                            return Card(
+                              child: ListView.separated(
+                                physics: const NeverScrollableScrollPhysics(),
+                                shrinkWrap: true,
+                                itemCount: recent.length,
+                                separatorBuilder: (_, __) =>
+                                    const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final entry = recent[index];
+                                  return ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    leading: Icon(
+                                      entry.completed
+                                          ? Icons.check_circle
+                                          : Icons.radio_button_unchecked,
+                                      color: entry.completed
+                                          ? Colors.green
+                                          : Colors.grey,
+                                    ),
+                                    title: Text(DateFormat('MMM d, yyyy')
+                                        .format(entry.date)),
+                                    trailing: Text(
+                                      entry.completed ? 'Completed' : 'Missed',
+                                      style: TextStyle(
+                                        color: entry.completed
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                             );
                           },
-                        ),
-                      ),
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (err, __) =>
+                              Center(child: Text('Error: $err')),
+                        );
+                      }),
                     ],
                   ),
                 ),

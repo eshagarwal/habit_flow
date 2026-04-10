@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../data/providers.dart';
+import '../../../domain/models/habit.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
@@ -26,204 +26,166 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   Widget build(BuildContext context) {
     final habitsAsync = ref.watch(habitsProvider);
     final monthEntriesAsync = ref.watch(monthEntriesProvider(_currentMonth));
-    final selectedDate =
-        DateTime.now().subtract(Duration(days: _selectedDayIndex));
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('History'),
-        elevation: 0,
+    final selectedDate = DateTime.now().subtract(
+      Duration(
+        days: _selectedDayIndex,
       ),
-      body: habitsAsync.when(
-        data: (habits) {
-          if (habits.isEmpty) {
-            return Center(
+    );
+
+    return habitsAsync.when(
+      data: (habits) {
+        if (habits.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.history,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No history available yet',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Start creating and completing habits to see your history',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return monthEntriesAsync.when(
+          data: (monthData) {
+            return SingleChildScrollView(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.history,
-                    size: 64,
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No history available yet',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Start creating and completing habits to see your history',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                  // Month selector and calendar
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Month/Year header with navigation
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              DateFormat('MMMM yyyy').format(_currentMonth),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                            Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.chevron_left),
+                                  onPressed: () {
+                                    setState(() {
+                                      _currentMonth = DateTime(
+                                        _currentMonth.year,
+                                        _currentMonth.month - 1,
+                                      );
+                                    });
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.chevron_right),
+                                  onPressed: () {
+                                    setState(() {
+                                      _currentMonth = DateTime(
+                                        _currentMonth.year,
+                                        _currentMonth.month + 1,
+                                      );
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                    textAlign: TextAlign.center,
+                        const SizedBox(height: 16),
+                        // Calendar grid
+                        _buildCalendarGrid(context, monthData, habits),
+                      ],
+                    ),
                   ),
+
+                  // Selected day details
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Completion Details',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDayDetailsCard(
+                            context, selectedDate, monthData, habits),
+                      ],
+                    ),
+                  ),
+
+                  // 30-day summary
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Monthly Summary',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMonthlySummary(context, monthData),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
                 ],
               ),
             );
-          }
-
-          return monthEntriesAsync.when(
-            data: (monthData) {
-              return SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Month selector and calendar
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Month/Year header with navigation
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                DateFormat('MMMM yyyy').format(_currentMonth),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                              ),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.chevron_left),
-                                    onPressed: () {
-                                      setState(() {
-                                        _currentMonth = DateTime(
-                                          _currentMonth.year,
-                                          _currentMonth.month - 1,
-                                        );
-                                      });
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.chevron_right),
-                                    onPressed: () {
-                                      setState(() {
-                                        _currentMonth = DateTime(
-                                          _currentMonth.year,
-                                          _currentMonth.month + 1,
-                                        );
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          // Calendar grid
-                          _buildCalendarGrid(context, monthData),
-                        ],
-                      ),
-                    ),
-
-                    // Selected day details
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Completion Details',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDayDetailsCard(
-                              context, selectedDate, monthData),
-                        ],
-                      ),
-                    ),
-
-                    // 30-day summary
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Monthly Summary',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          _buildMonthlySummary(context, monthData),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(
-              child: Text(
-                'Error loading history: $error',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Text(
+              'Error loading history: $error',
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            'Error loading history: $error',
-            style: Theme.of(context).textTheme.bodyLarge,
           ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text(
+          'Error loading history: $error',
+          style: Theme.of(context).textTheme.bodyLarge,
         ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 1,
-        onDestinationSelected: (index) {
-          if (index == 0) context.go('/');
-          if (index == 2) context.go('/stats');
-          if (index == 3) context.go('/settings');
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Today',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today),
-            label: 'History',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart),
-            label: 'Stats',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildCalendarGrid(
-      BuildContext context, MonthlyEntriesData monthData) {
+      BuildContext context, MonthlyEntriesData monthData, List<Habit> habits) {
     final weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDay = _currentMonth.month == 12
@@ -279,8 +241,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 final isToday = DateUtils.isSameDay(date, DateTime.now());
                 final isSelected = _selectedDayIndex == 0 && isToday;
 
-                // Determine completion status
-                bool isCompleted = day % 3 == 0; // Simulate some completed days
+                final dayEntries = monthData.entriesByDay[day] ?? [];
+                final isCompleted = dayEntries.isNotEmpty &&
+                    dayEntries.every((e) => e.completed);
 
                 return GestureDetector(
                   onTap: () {
@@ -339,6 +302,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     BuildContext context,
     DateTime selectedDate,
     MonthlyEntriesData monthData,
+    List<Habit> habits,
   ) {
     final dateStr = DateFormat('EEEE, MMMM d, yyyy').format(selectedDate);
 
@@ -451,6 +415,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final entry = dayEntries[index];
+                final habit =
+                    habits.where((h) => h.uuid == entry.habitUuid).firstOrNull;
                 return Row(
                   children: [
                     Icon(
@@ -463,7 +429,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Entry ${index + 1}',
+                        habit?.title ?? 'Unknown Habit',
                         style: TextStyle(
                           color: entry.completed ? Colors.grey[600] : null,
                         ),
@@ -490,6 +456,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final completionRate = totalEntries > 0
         ? ((completedEntries / totalEntries) * 100).toStringAsFixed(1)
         : '0.0';
+    final daysInMonth =
+        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
 
     return Card(
       child: Padding(
@@ -517,7 +485,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   context,
                   icon: Icons.trending_up,
                   label: 'Avg Score',
-                  value: '85%',
+                  value: '$completionRate%',
                   color: Colors.orange,
                 ),
               ],
@@ -535,8 +503,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             Wrap(
               spacing: 4,
               runSpacing: 4,
-              children: List.generate(30, (index) {
-                final isActive = (index + 1) % 3 == 0;
+              children: List.generate(daysInMonth, (index) {
+                final day = index + 1;
+                final dayEntries = monthData.entriesByDay[day] ?? [];
+                final isActive = dayEntries.isNotEmpty;
                 return Container(
                   width: 20,
                   height: 20,

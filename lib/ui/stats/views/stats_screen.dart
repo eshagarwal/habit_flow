@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../data/providers.dart';
 import '../../../domain/models/habit.dart';
@@ -16,295 +15,250 @@ class StatsScreen extends ConsumerWidget {
     final weeklyAsync = ref.watch(weeklyActivityProvider);
     final trendAsync = ref.watch(monthlyTrendProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Statistics'),
-        elevation: 0,
-      ),
-      body: habitsAsync.when(
-        data: (habits) {
-          if (habits.isEmpty) {
-            return Center(
+    return habitsAsync.when(
+      data: (habits) {
+        if (habits.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.bar_chart,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No statistics available',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create and complete habits to see your statistics',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return statsAsync.when(
+          data: (stats) {
+            return SingleChildScrollView(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.bar_chart,
-                    size: 64,
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No statistics available',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Create and complete habits to see your statistics',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                  // Overview Cards
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // Top row cards
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                title: 'Active Habits',
+                                value: stats.activeHabits.toString(),
+                                icon: Icons.fitness_center,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                title: 'Overall Rate',
+                                value:
+                                    '${stats.overallCompletionRate.toStringAsFixed(0)}%',
+                                icon: Icons.percent,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
                         ),
-                    textAlign: TextAlign.center,
+                        const SizedBox(height: 12),
+                        // Bottom row cards
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                title: 'Streak',
+                                value: stats.currentStreak.toString(),
+                                unit: 'days',
+                                icon: Icons.local_fire_department,
+                                color: Colors.orange,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                context,
+                                title: 'This Week',
+                                value: stats.completedThisWeek.toString(),
+                                unit: 'completed',
+                                icon: Icons.check_circle,
+                                color: Colors.purple,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+
+                  // Weekly Chart
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Weekly Activity',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: SizedBox(
+                              height: 220,
+                              child: weeklyAsync.when(
+                                data: (weekly) =>
+                                    _buildWeeklyChart(weekly.dailyCompletions),
+                                loading: () => const Center(
+                                    child: CircularProgressIndicator()),
+                                error: (e, st) =>
+                                    Center(child: Text('Error: $e')),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Completion Trend
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Completion Trend',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: SizedBox(
+                              height: 220,
+                              child: trendAsync.when(
+                                data: (trend) => _buildTrendChart(
+                                    trend.weeklyCompletionRates),
+                                loading: () => const Center(
+                                    child: CircularProgressIndicator()),
+                                error: (e, st) =>
+                                    Center(child: Text('Error: $e')),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Habit Performance
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Habit Performance',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        Card(
+                          child: ListView.separated(
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            itemCount: habits.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final habit = habits[index];
+                              return _buildHabitPerformanceRow(
+                                  context, habit, index, ref);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Category Breakdown
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'By Category',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: SizedBox(
+                              height: 200,
+                              child:
+                                  _buildCategoryChart(stats.categoryBreakdown),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
                 ],
               ),
             );
-          }
-
-          return statsAsync.when(
-            data: (stats) {
-              return SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Overview Cards
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          // Top row cards
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  context,
-                                  title: 'Active Habits',
-                                  value: stats.activeHabits.toString(),
-                                  icon: Icons.fitness_center,
-                                  color: Colors.blue,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  context,
-                                  title: 'Overall Rate',
-                                  value:
-                                      '${stats.overallCompletionRate.toStringAsFixed(0)}%',
-                                  icon: Icons.percent,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          // Bottom row cards
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  context,
-                                  title: 'Streak',
-                                  value: stats.currentStreak.toString(),
-                                  unit: 'days',
-                                  icon: Icons.local_fire_department,
-                                  color: Colors.orange,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildStatCard(
-                                  context,
-                                  title: 'This Week',
-                                  value: stats.completedThisWeek.toString(),
-                                  unit: 'completed',
-                                  icon: Icons.check_circle,
-                                  color: Colors.purple,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Weekly Chart
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Weekly Activity',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: SizedBox(
-                                height: 220,
-                                child: weeklyAsync.when(
-                                  data: (weekly) => _buildWeeklyChart(
-                                      weekly.dailyCompletions),
-                                  loading: () => const Center(
-                                      child: CircularProgressIndicator()),
-                                  error: (e, st) =>
-                                      Center(child: Text('Error: $e')),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Completion Trend
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Completion Trend',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: SizedBox(
-                                height: 220,
-                                child: trendAsync.when(
-                                  data: (trend) => _buildTrendChart(
-                                      trend.weeklyCompletionRates),
-                                  loading: () => const Center(
-                                      child: CircularProgressIndicator()),
-                                  error: (e, st) =>
-                                      Center(child: Text('Error: $e')),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Habit Performance
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Habit Performance',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          Card(
-                            child: ListView.separated(
-                              physics: const NeverScrollableScrollPhysics(),
-                              shrinkWrap: true,
-                              itemCount: habits.length,
-                              separatorBuilder: (_, __) =>
-                                  const Divider(height: 1),
-                              itemBuilder: (context, index) {
-                                final habit = habits[index];
-                                return _buildHabitPerformanceRow(
-                                    context, habit, index, ref);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Category Breakdown
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'By Category',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: SizedBox(
-                                height: 200,
-                                child: _buildCategoryChart(
-                                    stats.categoryBreakdown),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(
-              child: Text(
-                'Error loading statistics: $error',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Text(
+              'Error loading statistics: $error',
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Text(
-            'Error loading statistics: $error',
-            style: Theme.of(context).textTheme.bodyLarge,
           ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Text(
+          'Error loading statistics: $error',
+          style: Theme.of(context).textTheme.bodyLarge,
         ),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 2,
-        onDestinationSelected: (index) {
-          if (index == 0) context.go('/');
-          if (index == 1) context.go('/history');
-          if (index == 3) context.go('/settings');
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Today',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_today_outlined),
-            selectedIcon: Icon(Icons.calendar_today),
-            label: 'History',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart),
-            label: 'Stats',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
       ),
     );
   }

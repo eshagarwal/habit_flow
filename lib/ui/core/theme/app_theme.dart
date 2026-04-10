@@ -16,12 +16,12 @@ class AppTheme {
         onError: AppColors.onError,
       ),
       scaffoldBackgroundColor: const Color(0xFFFAFAFA),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.onSurface,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           color: AppColors.onSurface,
           fontSize: 24,
           fontWeight: FontWeight.w700,
@@ -160,12 +160,12 @@ class AppTheme {
         onError: Color(0xFF000000),
       ),
       scaffoldBackgroundColor: const Color(0xFF121212),
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: const TextStyle(
+        titleTextStyle: TextStyle(
           color: Colors.white,
           fontSize: 24,
           fontWeight: FontWeight.w700,
